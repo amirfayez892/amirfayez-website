@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Amir Fayez — personal studio for design and code." />
+    <title>أمير فايز — Amir Fayez</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect rx='16' width='64' height='64' fill='%230b0b10'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='28' fill='%23e8c36a' font-family='serif'%3Eأ%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="orb orb-a" aria-hidden="true"></div>
+    <div class="orb orb-b" aria-hidden="true"></div>
+    <div class="cursor-glow" aria-hidden="true"></div>
+
+    <header class="nav">
+      <a class="brand" href="#top">
+        <span class="brand-mark" id="brandMark">أ</span>
+        <span>
+          <strong id="brandName">أمير فايز</strong>
+          <small id="brandSub">Amir Fayez</small>
+        </span>
+      </a>
+      <nav class="nav-links">
+        <a href="#about" data-i18n="navAbout"></a>
+        <a href="#work" data-i18n="navWork"></a>
+        <a href="#stack" data-i18n="navStack"></a>
+        <a href="#journal" data-i18n="navJournal"></a>
+        <a href="#contact" data-i18n="navContact"></a>
+      </nav>
+      <div class="nav-actions">
+        <button class="lang-btn" id="langToggle" type="button">EN</button>
+        <button class="theme-btn" id="themeToggle" type="button" aria-label="Theme">
+          <span class="sun"></span>
+          <span class="moon"></span>
+        </button>
+        <a class="nav-cta" href="#contact" data-i18n="navCta"></a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <p class="eyebrow" id="heroEyebrow"></p>
+        <h1>
+          <span id="heroName"></span>
+          <em id="heroTagline"></em>
+        </h1>
+        <p class="lede" id="heroLede"></p>
+        <div class="hero-actions">
+          <a class="btn btn-gold" href="#work" data-i18n="btnWork"></a>
+          <a class="btn btn-ghost" href="#about" data-i18n="btnAbout"></a>
+          <a class="btn btn-wa" id="heroWhatsapp" target="_blank" rel="noopener">WhatsApp</a>
+        </div>
+        <ul class="hero-meta" id="heroMeta"></ul>
+      </section>
+
+      <section id="about" class="about">
+        <div class="about-copy">
+          <p class="eyebrow" data-i18n="aboutEyebrow"></p>
+          <h2 id="aboutTitle"></h2>
+          <p id="aboutP1"></p>
+          <p id="aboutP2"></p>
+        </div>
+        <aside class="about-card">
+          <p class="quote" id="aboutQuote"></p>
+          <div class="stats">
+            <div><strong id="projectCount">0</strong><span data-i18n="statProjects"></span></div>
+            <div><strong>1</strong><span data-i18n="statOwner"></span></div>
+            <div><strong>∞</strong><span data-i18n="statCare"></span></div>
+          </div>
+        </aside>
+      </section>
+
+      <section id="work" class="work">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="workEyebrow"></p>
+            <h2 data-i18n="workTitle"></h2>
+          </div>
+          <div class="filters" id="filters"></div>
+        </div>
+        <div class="project-grid" id="projectGrid"></div>
+        <p class="empty-note" id="emptyNote" hidden></p>
+      </section>
+
+      <section id="stack" class="craft">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="stackEyebrow"></p>
+            <h2 data-i18n="stackTitle"></h2>
+            <p class="section-lead" data-i18n="stackLead"></p>
+          </div>
+        </div>
+        <div class="stack-grid" id="stackGrid"></div>
+      </section>
+
+      <section id="journal" class="journal">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="journalEyebrow"></p>
+            <h2 data-i18n="journalTitle"></h2>
+            <p class="section-lead" data-i18n="journalLead"></p>
+          </div>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </section>
+
+      <section id="contact" class="contact">
+        <div>
+          <p class="eyebrow" data-i18n="contactEyebrow"></p>
+          <h2 id="contactTitle"></h2>
+          <p id="contactLead"></p>
+          <div class="contact-links">
+            <a class="btn btn-wa" id="waButton" target="_blank" rel="noopener">WhatsApp</a>
+            <!-- زر تليجرام الجديد -->
+            <a href="https://t.me/amirfayez51" class="btn btn-tg" id="tgButton" target="_blank" rel="noopener">Telegram</a>
+            <p class="phone-line" id="phoneLine"></p>
+          </div>
+        </div>
+        <form id="contactForm" class="contact-form">
+          <label><span data-i18n="labelName"></span><input name="name" required /></label>
+          <label><span data-i18n="labelEmail"></span><input name="email" type="email" required dir="ltr" /></label>
+          <label><span data-i18n="labelMessage"></span><textarea name="message" required rows="5"></textarea></label>
+          <button class="btn btn-gold" type="submit" data-i18n="btnSend"></button>
+          <p class="form-status" id="formStatus" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p id="footerCopy"></p>
+      <button class="lock-btn" id="adminOpen" type="button" data-i18n="adminEntry"></button>
+    </footer>
+
+    <div class="edit-bar" id="editBar" hidden>
+      <button class="btn btn-gold" id="openEditor" type="button" data-i18n="editOpen"></button>
+    </div>
+
+    <div class="modal" id="projectModal" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true">
+        <button class="close-x" data-close="projectModal" type="button">×</button>
+        <img id="modalImage" alt="" />
+        <div class="modal-body">
+          <p class="eyebrow" id="modalTag"></p>
+          <h3 id="modalTitle"></h3>
+          <p id="modalDesc"></p>
+          <a class="btn btn-gold" id="modalLink" target="_blank" rel="noopener"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="adminModal" hidden>
+      <div class="modal-card admin-card" role="dialog" aria-modal="true">
+        <button class="close-x" data-close="adminModal" type="button">×</button>
+        <div id="authView">
+          <p class="eyebrow" data-i18n="privacy"></p>
+          <h3 id="authTitle"></h3>
+          <p class="auth-hint" id="authHint"></p>
+          <form id="authForm">
+            <label><span data-i18n="labelPassword"></span><input id="authPass" type="password" required minlength="4" autocomplete="current-password" /></label>
+            <label id="authPass2Wrap" hidden><span data-i18n="labelPassword2"></span><input id="authPass2" type="password" minlength="4" /></label>
+            <button class="btn btn-gold" type="submit" data-i18n="btnLogin"></button>
+            <p class="form-status" id="authStatus"></p>
+          </form>
+        </div>
+        <div id="dashView" hidden>
+          <div class="dash-head">
+            <div>
+              <p class="eyebrow" data-i18n="dashEyebrow"></p>
+              <h3 data-i18n="dashTitle"></h3>
+            </div>
+            <button class="btn btn-ghost" id="logoutBtn" type="button" data-i18n="btnLogout"></button>
+          </div>
+          <div class="tabs" id="adminTabs"></div>
+          <div id="adminPane"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
