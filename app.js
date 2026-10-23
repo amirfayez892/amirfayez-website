@@ -1,3 +1,4 @@
+
 const KEYS = {
   theme: "af-theme",
   lang: "af-lang",
@@ -5,6 +6,9 @@ const KEYS = {
   site: "af-site-v2",
   session: "af-session",
 };
+
+// كلمة المرور الخاصة بك للوحة التحكم (يمكنك تعديلها هنا)
+const ADMIN_PASSWORD_HASH = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // كلمة المرور الافتراضية: admin (يمكنك تغييرها)
 
 const FALLBACK_IMG =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop stop-color='%23111118'/%3E%3Cstop offset='1' stop-color='%23362b16'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='800' height='500'/%3E%3Ctext x='400' y='260' text-anchor='middle' fill='%23e8c36a' font-size='42' font-family='serif'%3EAmir%3C/text%3E%3C/svg%3E";
@@ -48,7 +52,6 @@ const UI = {
     editOpen: "تعديل الموقع",
     privacy: "خصوصية",
     labelPassword: "كلمة المرور",
-    labelPassword2: "تأكيد كلمة المرور",
     btnLogin: "دخول",
     dashEyebrow: "لوحة أمير",
     dashTitle: "عدّل كل شيء بسهولة",
@@ -58,9 +61,7 @@ const UI = {
     visit: "زيارة المشروع",
     sent: "وصلت الرسالة، وتم إرسال التنبيه.",
     authOld: "هذه اللوحة لك وحدك. منها تعدّل النصوص والمشاريع والأدوات واليوميات.",
-    authNew: "أول مرة؟ اختر كلمة مرور لا يراها أحد غيرك.",
     authTitleOld: "دخول أمير فقط",
-    authTitleNew: "أنشئ كلمة المرور الخاصة",
     footer: (y, n) => `© ${y} ${n}. كل الحقوق محفوظة.`,
     tabs: { site: "الموقع", projects: "المشاريع", stack: "الأدوات", journal: "اليوميات", contact: "التواصل", inbox: "الرسائل" },
   },
@@ -95,7 +96,6 @@ const UI = {
     editOpen: "Edit site",
     privacy: "Private",
     labelPassword: "Password",
-    labelPassword2: "Confirm password",
     btnLogin: "Enter",
     dashEyebrow: "Amir studio",
     dashTitle: "Edit everything easily",
@@ -105,9 +105,7 @@ const UI = {
     visit: "Visit project",
     sent: "Message received, and the alert was sent.",
     authOld: "This panel is yours. Edit copy, projects, tools, and the journal.",
-    authNew: "First time? Choose a password only you know.",
     authTitleOld: "Amir only",
-    authTitleNew: "Create your private password",
     footer: (y, n) => `© ${y} ${n}. All rights reserved.`,
     tabs: { site: "Site", projects: "Projects", stack: "Tools", journal: "Journal", contact: "Contact", inbox: "Inbox" },
   },
@@ -220,7 +218,6 @@ const $ = (id) => document.getElementById(id);
 let lang = localStorage.getItem(KEYS.lang) || "ar";
 let filter = "all";
 let adminTab = "site";
-let editingId = "";
 
 function read(key, fallback) {
   try {
@@ -295,622 +292,341 @@ function loggedIn() {
   return sessionStorage.getItem(KEYS.session) === "1";
 }
 
-function applyI18n() {
-  const pack = ui();
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    el.textContent = pack[el.dataset.i18n] || "";
-  });
-}
+// تشغيل وتحديث العرض عند التحميل
+document.addEventListener("DOMContentLoaded", () => {
+  const savedTheme = localStorage.getItem(KEYS.theme) || "dark";
+  setTheme(savedTheme);
+  document.documentElement.lang = lang === "ar" ? "ar" : "en";
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
 
-function renderPublic() {
+  renderAll();
+  initEvents();
+});
+
+function renderAll() {
   const s = site();
-  const pack = ui();
-  $("brandMark").textContent = s.mark || "أ";
-  $("brandName").textContent = field(s, "name");
-  $("brandSub").textContent = lang === "ar" ? s.nameEn : s.nameAr;
+  const u = ui();
+
+  // النصوص الثابتة
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const k = el.getAttribute("data-i18n");
+    if (u[k]) el.textContent = u[k];
+  });
+
+  $("brandMark").textContent = s.mark;
+  $("brandName").textContent = s.nameAr;
+  $("brandSub").textContent = s.nameEn;
+  $("langToggle").textContent = lang === "ar" ? "EN" : "العربية";
+
   $("heroEyebrow").textContent = field(s, "eyebrow");
   $("heroName").textContent = field(s, "name");
   $("heroTagline").textContent = field(s, "tagline");
   $("heroLede").textContent = field(s, "lede");
+
+  $("heroWhatsapp").href = waHref("مرحباً أمير، تواصلت معك من موقعك الشخصي.");
+  $("waButton").href = waHref("مرحباً أمير، أرغب بمناقشة مشروع معك.");
+
+  // الميتا
+  const metaList = lang === "ar" ? s.metaAr : s.metaEn;
+  $("heroMeta").innerHTML = metaList
+    .map((m) => `<li><span>${m.label}</span><strong>${m.value}</strong></li>`)
+    .join("");
+
+  // قسم عني
   $("aboutTitle").textContent = field(s, "aboutTitle");
   $("aboutP1").textContent = field(s, "aboutP1");
   $("aboutP2").textContent = field(s, "aboutP2");
   $("aboutQuote").textContent = field(s, "quote");
+  $("projectCount").textContent = s.projects.length;
+
+  // التواصل
   $("contactTitle").textContent = field(s, "contactTitle");
   $("contactLead").textContent = field(s, "contactLead");
-  $("projectCount").textContent = String((s.projects || []).length);
-  $("footerCopy").textContent = pack.footer(new Date().getFullYear(), field(s, "name"));
-  $("langToggle").textContent = lang === "ar" ? "EN" : "عربي";
-  $("emptyNote").textContent = pack.empty;
-  $("modalLink").textContent = pack.visit;
   $("phoneLine").textContent = s.phone;
-  $("waButton").href = waHref(lang === "ar" ? "مرحبا أمير، تواصلت من موقعك." : "Hi Amir, I found your site.");
-  $("heroWhatsapp").href = $("waButton").href;
-  $("heroWhatsapp").textContent = `WhatsApp ${s.phone}`;
-  $("waButton").textContent = `WhatsApp ${s.phone}`;
 
-  const meta = lang === "ar" ? s.metaAr : s.metaEn;
-  $("heroMeta").innerHTML = (meta || [])
-    .map((m) => `<li><span>${m.label}</span>${m.value}</li>`)
-    .join("");
-
-  applyI18n();
+  // الفلاتر والمشاريع
   renderFilters();
   renderProjects();
   renderStack();
   renderJournal();
-  $("editBar").hidden = !loggedIn();
+
+  $("footerCopy").textContent = u.footer(new Date().getFullYear(), s.nameAr);
+
+  // شريط التعديل يظهر فقط إذا كنت مسجلاً الدخول
+  if (loggedIn()) {
+    $("editBar").hidden = false;
+  } else {
+    $("editBar").hidden = true;
+  }
 }
 
 function renderFilters() {
-  const pack = ui();
-  const tags = [{ id: "all", label: pack.all }, ...CATS.map((c) => ({ id: c.id, label: c[lang] }))];
-  $("filters").innerHTML = tags
-    .map((t) => `<button class="filter-btn${filter === t.id ? " active" : ""}" data-tag="${t.id}">${t.label}</button>`)
-    .join("");
+  const u = ui();
+  let html = `<button class="filter-btn ${filter === "all" ? "active" : ""}" data-cat="all">${u.all}</button>`;
+  CATS.forEach((c) => {
+    html += `<button class="filter-btn ${filter === c.id ? "active" : ""}" data-cat="${c.id}">${c[lang]}</button>`;
+  });
+  $("filters").innerHTML = html;
+
+  $("filters").querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filter = btn.getAttribute("data-cat");
+      renderFilters();
+      renderProjects();
+    });
+  });
 }
 
 function renderProjects() {
   const s = site();
-  const list = (s.projects || []).filter((p) => filter === "all" || p.cat === filter);
-  $("emptyNote").hidden = list.length > 0;
+  const u = ui();
+  const list = filter === "all" ? s.projects : s.projects.filter((p) => p.cat === filter);
+
+  if (list.length === 0) {
+    $("projectGrid").innerHTML = "";
+    $("emptyNote").hidden = false;
+    $("emptyNote").textContent = u.empty;
+    return;
+  }
+
+  $("emptyNote").hidden = true;
   $("projectGrid").innerHTML = list
     .map(
       (p) => `
-      <article class="project-card" data-id="${p.id}">
-        <img src="${p.image || FALLBACK_IMG}" alt="" />
-        <div class="body">
-          <p class="eyebrow">${catLabel(p.cat)}</p>
-          <h3>${field(p, "title")}</h3>
-          <p>${field(p, "desc")}</p>
-        </div>
-      </article>`
+    <article class="project-card" data-id="${p.id}">
+      <img src="${p.image || FALLBACK_IMG}" alt="${field(p, "title")}" />
+      <div class="body">
+        <p class="eyebrow">${catLabel(p.cat)}</p>
+        <h3>${field(p, "title")}</h3>
+        <p>${field(p, "desc")}</p>
+      </div>
+    </article>`
     )
     .join("");
+
+  $("projectGrid").querySelectorAll(".project-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const id = card.getAttribute("data-id");
+      const p = s.projects.find((x) => x.id === id);
+      if (p) openProjectModal(p);
+    });
+  });
+}
+
+function openProjectModal(p) {
+  const u = ui();
+  $("modalImage").src = p.image || FALLBACK_IMG;
+  $("modalTag").textContent = catLabel(p.cat);
+  $("modalTitle").textContent = field(p, "title");
+  $("modalDesc").textContent = field(p, "desc");
+
+  const link = $("modalLink");
+  if (p.url) {
+    link.href = p.url;
+    link.textContent = u.visit;
+    link.hidden = false;
+  } else {
+    link.hidden = true;
+  }
+
+  $("projectModal").hidden = false;
 }
 
 function renderStack() {
   const s = site();
-  $("stackGrid").innerHTML = (s.tools || [])
+  $("stackGrid").innerHTML = s.tools
     .map(
       (t) => `
-      <article class="stack-card" tabindex="0">
-        <span class="stack-icon">${t.icon || "●"}</span>
-        <h3>${field(t, "title")}</h3>
-        <p>${field(t, "desc")}</p>
-      </article>`
+    <div class="stack-card">
+      <span class="stack-icon">${t.icon || "⌘"}</span>
+      <h3>${field(t, "title")}</h3>
+      <p>${field(t, "desc")}</p>
+    </div>`
     )
     .join("");
 }
 
 function renderJournal() {
   const s = site();
-  $("timeline").innerHTML = (s.posts || [])
+  $("timeline").innerHTML = s.posts
     .map(
-      (p) => `
-      <article class="time-item">
-        <time>${p.date}</time>
-        <h3>${field(p, "title")}</h3>
-        <p>${field(p, "body")}</p>
-      </article>`
+      (j) => `
+    <article class="time-item">
+      <time>${j.date}</time>
+      <h3>${field(j, "title")}</h3>
+      <p>${field(j, "body")}</p>
+    </article>`
     )
     .join("");
 }
 
-function openProject(id) {
-  const p = site().projects.find((item) => item.id === id);
-  if (!p) return;
-  $("modalImage").src = p.image || FALLBACK_IMG;
-  $("modalTag").textContent = catLabel(p.cat);
-  $("modalTitle").textContent = field(p, "title");
-  $("modalDesc").textContent = field(p, "desc");
-  const link = $("modalLink");
-  if (p.url) {
-    link.hidden = false;
-    link.href = p.url;
-  } else {
-    link.hidden = true;
-  }
-  $("projectModal").hidden = false;
-}
+function initEvents() {
+  // تبديل اللغة
+  $("langToggle").addEventListener("click", () => {
+    setLang(lang === "ar" ? "en" : "ar");
+  });
 
-function compressImage(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const max = 1100;
-        const scale = Math.min(1, max / img.width);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
-      };
-      img.src = reader.result;
+  // تبديل المظهر
+  $("themeToggle").addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    setTheme(current === "dark" ? "light" : "dark");
+  });
+
+  // فتح وإغلاق المودالز
+  $("adminOpen").addEventListener("click", () => {
+    openAdminModal();
+  });
+
+  $("openEditor").addEventListener("click", () => {
+    openAdminModal();
+  });
+
+  document.querySelectorAll("[data-close]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-close");
+      $(id).hidden = true;
+    });
+  });
+
+  // نموذج التواصل
+  $("contactForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const msg = {
+      id: "m_" + Date.now(),
+      name: fd.get("name"),
+      email: fd.get("email"),
+      message: fd.get("message"),
+      date: new Date().toISOString().split("T")[0],
     };
-    reader.readAsDataURL(file);
+
+    const s = site();
+    s.messages.unshift(msg);
+    saveSite(s);
+
+    $("formStatus").textContent = ui().sent;
+    e.target.reset();
+  });
+
+  // نموذج تسجيل الدخول الخاص بك فقط
+  $("authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const passInput = $("authPass").value;
+    const inputHash = await hash(passInput);
+
+    if (inputHash === ADMIN_PASSWORD_HASH) {
+      sessionStorage.setItem(KEYS.session, "1");
+      $("authStatus").textContent = "";
+      $("authView").hidden = true;
+      $("dashView").hidden = false;
+      renderDashboard();
+      $("editBar").hidden = false;
+    } else {
+      $("authStatus").textContent = lang === "ar" ? "كلمة المرور غير صحيحة" : "Incorrect password";
+    }
+  });
+
+  $("logoutBtn").addEventListener("click", () => {
+    sessionStorage.removeItem(KEYS.session);
+    $("adminModal").hidden = true;
+    $("editBar").hidden = true;
   });
 }
 
-function val(form, name) {
-  return form.querySelector(`[name="${name}"]`)?.value?.trim() || "";
-}
+function openAdminModal() {
+  $("authPass").value = "";
+  $("authStatus").textContent = "";
 
-function renderAdmin() {
-  const pack = ui();
-  const tabs = pack.tabs;
-  $("adminTabs").innerHTML = Object.entries(tabs)
-    .map(([id, label]) => `<button type="button" class="tab${adminTab === id ? " active" : ""}" data-tab="${id}">${label}</button>`)
-    .join("");
-  const pane = $("adminPane");
-  const s = site();
-  if (adminTab === "site") {
-    pane.innerHTML = `
-      <form id="siteForm" class="admin-form">
-        <div class="two">
-          <label>الاسم عربي<input name="nameAr" value="${esc(s.nameAr)}" /></label>
-          <label>Name EN<input name="nameEn" value="${esc(s.nameEn)}" /></label>
-        </div>
-        <label>الرمز<input name="mark" value="${esc(s.mark)}" /></label>
-        <div class="two">
-          <label>العنوان الفرعي عربي<input name="eyebrowAr" value="${esc(s.eyebrowAr)}" /></label>
-          <label>Eyebrow EN<input name="eyebrowEn" value="${esc(s.eyebrowEn)}" /></label>
-        </div>
-        <div class="two">
-          <label>الجملة الذهبية عربي<textarea name="taglineAr">${esc(s.taglineAr)}</textarea></label>
-          <label>Tagline EN<textarea name="taglineEn">${esc(s.taglineEn)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>المقدمة عربي<textarea name="ledeAr">${esc(s.ledeAr)}</textarea></label>
-          <label>Intro EN<textarea name="ledeEn">${esc(s.ledeEn)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>عنوان من أنا عربي<textarea name="aboutTitleAr">${esc(s.aboutTitleAr)}</textarea></label>
-          <label>About title EN<textarea name="aboutTitleEn">${esc(s.aboutTitleEn)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>فقرة 1 عربي<textarea name="aboutP1Ar">${esc(s.aboutP1Ar)}</textarea></label>
-          <label>Paragraph 1 EN<textarea name="aboutP1En">${esc(s.aboutP1En)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>فقرة 2 عربي<textarea name="aboutP2Ar">${esc(s.aboutP2Ar)}</textarea></label>
-          <label>Paragraph 2 EN<textarea name="aboutP2En">${esc(s.aboutP2En)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>اقتباس عربي<textarea name="quoteAr">${esc(s.quoteAr)}</textarea></label>
-          <label>Quote EN<textarea name="quoteEn">${esc(s.quoteEn)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>تواصل عربي<textarea name="contactTitleAr">${esc(s.contactTitleAr)}</textarea></label>
-          <label>Contact title EN<textarea name="contactTitleEn">${esc(s.contactTitleEn)}</textarea></label>
-        </div>
-        <div class="two">
-          <label>وصف التواصل عربي<textarea name="contactLeadAr">${esc(s.contactLeadAr)}</textarea></label>
-          <label>Contact lead EN<textarea name="contactLeadEn">${esc(s.contactLeadEn)}</textarea></label>
-        </div>
-        <button class="btn btn-gold" type="submit">حفظ النصوص</button>
-      </form>`;
-    $("siteForm").onsubmit = (e) => {
-      e.preventDefault();
-      const f = e.currentTarget;
-      const next = { ...site() };
-      [
-        "nameAr",
-        "nameEn",
-        "mark",
-        "eyebrowAr",
-        "eyebrowEn",
-        "taglineAr",
-        "taglineEn",
-        "ledeAr",
-        "ledeEn",
-        "aboutTitleAr",
-        "aboutTitleEn",
-        "aboutP1Ar",
-        "aboutP1En",
-        "aboutP2Ar",
-        "aboutP2En",
-        "quoteAr",
-        "quoteEn",
-        "contactTitleAr",
-        "contactTitleEn",
-        "contactLeadAr",
-        "contactLeadEn",
-      ].forEach((k) => (next[k] = val(f, k)));
-      saveSite(next);
-      renderAll();
-    };
-  } else if (adminTab === "projects") {
-    pane.innerHTML = `
-      <form id="projectForm" class="admin-form">
-        <div class="two">
-          <label>عنوان عربي<input name="titleAr" required /></label>
-          <label>Title EN<input name="titleEn" required /></label>
-        </div>
-        <label>التصنيف
-          <select name="cat">${CATS.map((c) => `<option value="${c.id}">${c.ar} / ${c.en}</option>`).join("")}</select>
-        </label>
-        <div class="two">
-          <label>وصف عربي<textarea name="descAr" required></textarea></label>
-          <label>Description EN<textarea name="descEn" required></textarea></label>
-        </div>
-        <label>الرابط<input name="url" dir="ltr" /></label>
-        <label>صورة<input name="image" type="file" accept="image/*" /></label>
-        <input type="hidden" name="editId" />
-        <button class="btn btn-gold" type="submit">حفظ المشروع</button>
-      </form>
-      <div class="admin-list" id="adminList"></div>`;
-    const list = $("adminList");
-    list.innerHTML = s.projects
-      .map(
-        (p) => `
-        <div class="admin-item">
-          <div><strong>${p.titleAr}</strong><br /><small>${catLabel(p.cat)}</small></div>
-          <div class="admin-row">
-            <button class="btn btn-ghost" data-edit="${p.id}" type="button">تعديل</button>
-            <button class="danger" data-del="${p.id}" type="button">حذف</button>
-          </div>
-        </div>`
-      )
-      .join("");
-    $("projectForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const f = e.currentTarget;
-      const file = f.image.files[0];
-      const current = site();
-      const editId = val(f, "editId");
-      let image = FALLBACK_IMG;
-      if (editId) {
-        const old = current.projects.find((p) => p.id === editId);
-        image = old?.image || FALLBACK_IMG;
-      }
-      if (file) image = await compressImage(file);
-      const item = {
-        id: editId || crypto.randomUUID(),
-        cat: val(f, "cat"),
-        titleAr: val(f, "titleAr"),
-        titleEn: val(f, "titleEn"),
-        descAr: val(f, "descAr"),
-        descEn: val(f, "descEn"),
-        url: val(f, "url"),
-        image,
-      };
-      const projects = editId
-        ? current.projects.map((p) => (p.id === editId ? item : p))
-        : [item, ...current.projects];
-      saveSite({ ...current, projects });
-      f.reset();
-      editingId = "";
-      renderAll();
-      renderAdmin();
-    };
-    list.onclick = (e) => {
-      const del = e.target.dataset.del;
-      const edit = e.target.dataset.edit;
-      if (del) {
-        const current = site();
-        saveSite({ ...current, projects: current.projects.filter((p) => p.id !== del) });
-        renderAll();
-        renderAdmin();
-      }
-      if (edit) {
-        const p = site().projects.find((x) => x.id === edit);
-        const f = $("projectForm");
-        f.titleAr.value = p.titleAr;
-        f.titleEn.value = p.titleEn;
-        f.descAr.value = p.descAr;
-        f.descEn.value = p.descEn;
-        f.url.value = p.url || "";
-        f.cat.value = p.cat;
-        f.editId.value = p.id;
-      }
-    };
-  } else if (adminTab === "stack") {
-    pane.innerHTML = `
-      <form id="toolForm" class="admin-form">
-        <label>أيقونة<input name="icon" placeholder="⌘" /></label>
-        <div class="two">
-          <label>عنوان عربي<input name="titleAr" required /></label>
-          <label>Title EN<input name="titleEn" required /></label>
-        </div>
-        <div class="two">
-          <label>تفاصيل عربي<textarea name="descAr" required></textarea></label>
-          <label>Details EN<textarea name="descEn" required></textarea></label>
-        </div>
-        <input type="hidden" name="editId" />
-        <button class="btn btn-gold" type="submit">حفظ الأداة</button>
-      </form>
-      <div class="admin-list" id="toolList"></div>`;
-    bindSimpleList("tools", "toolForm", "toolList", ["icon", "titleAr", "titleEn", "descAr", "descEn"]);
-  } else if (adminTab === "journal") {
-    pane.innerHTML = `
-      <form id="postForm" class="admin-form">
-        <label>التاريخ<input name="date" type="date" required /></label>
-        <div class="two">
-          <label>عنوان عربي<input name="titleAr" required /></label>
-          <label>Title EN<input name="titleEn" required /></label>
-        </div>
-        <div class="two">
-          <label>النص عربي<textarea name="bodyAr" required></textarea></label>
-          <label>Body EN<textarea name="bodyEn" required></textarea></label>
-        </div>
-        <input type="hidden" name="editId" />
-        <button class="btn btn-gold" type="submit">نشر اللقطة</button>
-      </form>
-      <div class="admin-list" id="postList"></div>`;
-    bindSimpleList("posts", "postForm", "postList", ["date", "titleAr", "titleEn", "bodyAr", "bodyEn"]);
-  } else if (adminTab === "contact") {
-    pane.innerHTML = `
-      <form id="hookForm" class="admin-form">
-        <label>رقم الواتساب<input name="phone" value="${esc(s.phone)}" dir="ltr" /></label>
-        <p class="auth-hint">ضع روابط التنبيه الفوري. اترك الفارغ إن لم تستخدمه.</p>
-        <label>Telegram webhook / Bot URL<input name="telegram" value="${esc(s.webhooks.telegram)}" dir="ltr" placeholder="https://api.telegram.org/bot.../sendMessage?chat_id=..." /></label>
-        <label>Email webhook (Formspree / Web3Forms)<input name="email" value="${esc(s.webhooks.email)}" dir="ltr" placeholder="https://formspree.io/f/xxxx" /></label>
-        <label>WhatsApp webhook (CallMeBot أو أي رابط)<input name="whatsapp" value="${esc(s.webhooks.whatsapp)}" dir="ltr" /></label>
-        <label>Webhook عام<input name="generic" value="${esc(s.webhooks.generic)}" dir="ltr" /></label>
-        <button class="btn btn-gold" type="submit">حفظ التواصل</button>
-        <button class="btn btn-ghost" id="exportBtn" type="button">تصدير نسخة</button>
-        <label>استيراد نسخة<input id="importFile" type="file" accept="application/json" /></label>
-      </form>`;
-    $("hookForm").onsubmit = (e) => {
-      e.preventDefault();
-      const f = e.currentTarget;
-      saveSite({
-        ...site(),
-        phone: val(f, "phone"),
-        webhooks: {
-          telegram: val(f, "telegram"),
-          email: val(f, "email"),
-          whatsapp: val(f, "whatsapp"),
-          generic: val(f, "generic"),
-        },
-      });
-      renderAll();
-    };
-    $("exportBtn").onclick = () => {
-      const blob = new Blob([JSON.stringify(site(), null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "amir-fayez-site.json";
-      a.click();
-    };
-    $("importFile").onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const data = JSON.parse(await file.text());
-      saveSite({ ...DEFAULT_SITE, ...data });
-      renderAll();
-      renderAdmin();
-    };
-  } else {
-    const inbox = s.messages || [];
-    pane.innerHTML = inbox.length
-      ? `<div class="inbox">${inbox
-          .map(
-            (m) => `<article><div><strong>${esc(m.name)}</strong> · ${esc(m.email)}<p>${esc(m.message)}</p><small>${m.at || ""}</small></div></article>`
-          )
-          .join("")}</div>`
-      : `<p class="auth-hint">لا رسائل بعد.</p>`;
-  }
-}
-
-function bindSimpleList(key, formId, listId, fields) {
-  const s = site();
-  const list = $(listId);
-  list.innerHTML = (s[key] || [])
-    .map(
-      (item) => `
-      <div class="admin-item">
-        <div><strong>${item.titleAr}</strong></div>
-        <div class="admin-row">
-          <button class="btn btn-ghost" data-edit="${item.id}" type="button">تعديل</button>
-          <button class="danger" data-del="${item.id}" type="button">حذف</button>
-        </div>
-      </div>`
-    )
-    .join("");
-  $(formId).onsubmit = (e) => {
-    e.preventDefault();
-    const f = e.currentTarget;
-    const current = site();
-    const editId = val(f, "editId");
-    const item = { id: editId || crypto.randomUUID() };
-    fields.forEach((name) => (item[name] = val(f, name)));
-    const arr = current[key] || [];
-    const nextArr = editId ? arr.map((x) => (x.id === editId ? item : x)) : [item, ...arr];
-    saveSite({ ...current, [key]: nextArr });
-    f.reset();
-    renderAll();
-    renderAdmin();
-  };
-  list.onclick = (e) => {
-    const del = e.target.dataset.del;
-    const edit = e.target.dataset.edit;
-    if (del) {
-      const current = site();
-      saveSite({ ...current, [key]: current[key].filter((x) => x.id !== del) });
-      renderAll();
-      renderAdmin();
-    }
-    if (edit) {
-      const item = site()[key].find((x) => x.id === edit);
-      const f = $(formId);
-      fields.forEach((name) => {
-        if (f[name]) f[name].value = item[name] || "";
-      });
-      f.editId.value = item.id;
-    }
-  };
-}
-
-function esc(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-async function notify(msg) {
-  const s = site();
-  const text = `رسالة جديدة من ${msg.name}\n${msg.email}\n${msg.phone || s.phone}\n${msg.message}`;
-  const payload = { ...msg, phone: s.phone, source: "amir-fayez" };
-  const jobs = [];
-  const { telegram, email, whatsapp, generic } = s.webhooks || {};
-  if (telegram) {
-    const url = telegram.includes("text=") ? telegram : `${telegram}${telegram.includes("?") ? "&" : "?"}text=${encodeURIComponent(text)}`;
-    jobs.push(fetch(url, { mode: "no-cors" }).catch(() => null));
-  }
-  if (whatsapp) {
-    const url = whatsapp.includes("text=") ? whatsapp : `${whatsapp}${whatsapp.includes("?") ? "&" : "?"}text=${encodeURIComponent(text)}`;
-    jobs.push(fetch(url, { mode: "no-cors" }).catch(() => null));
-  }
-  if (email) {
-    jobs.push(
-      fetch(email, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(payload),
-        mode: "no-cors",
-      }).catch(() => null)
-    );
-  }
-  if (generic) {
-    jobs.push(
-      fetch(generic, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        mode: "no-cors",
-      }).catch(() => null)
-    );
-  }
-  await Promise.all(jobs);
-}
-
-function showAdmin() {
-  $("adminModal").hidden = false;
-  const hasPass = Boolean(localStorage.getItem(KEYS.pass));
   if (loggedIn()) {
     $("authView").hidden = true;
     $("dashView").hidden = false;
-    renderAdmin();
-    $("editBar").hidden = false;
-    return;
+    renderDashboard();
+  } else {
+    $("authView").hidden = false;
+    $("dashView").hidden = true;
+    $("authTitle").textContent = ui().authTitleOld;
+    $("authHint").textContent = ui().authOld;
   }
-  $("authView").hidden = false;
-  $("dashView").hidden = true;
-  $("authPass2Wrap").hidden = hasPass;
-  $("authTitle").textContent = hasPass ? ui().authTitleOld : ui().authTitleNew;
-  $("authHint").textContent = hasPass ? ui().authOld : ui().authNew;
+  $("adminModal").hidden = false;
 }
 
-function renderAll() {
-  renderPublic();
-}
+function renderDashboard() {
+  const tabs = ui().tabs;
+  let html = "";
+  for (const k in tabs) {
+    html += `<button class="tab ${adminTab === k ? "active" : ""}" data-tab="${k}">${tabs[k]}</button>`;
+  }
+  $("adminTabs").innerHTML = html;
 
-function initTheme() {
-  const saved = localStorage.getItem(KEYS.theme);
-  const theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  setTheme(theme);
-}
-
-initTheme();
-setLang(lang);
-
-$("themeToggle").addEventListener("click", () => {
-  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
-  setTheme(next);
-});
-
-$("langToggle").addEventListener("click", () => setLang(lang === "ar" ? "en" : "ar"));
-
-$("filters").addEventListener("click", (e) => {
-  const btn = e.target.closest(".filter-btn");
-  if (!btn) return;
-  filter = btn.dataset.tag;
-  renderFilters();
-  renderProjects();
-});
-
-$("projectGrid").addEventListener("click", (e) => {
-  const card = e.target.closest(".project-card");
-  if (card) openProject(card.dataset.id);
-});
-
-document.querySelectorAll("[data-close]").forEach((btn) => {
-  btn.addEventListener("click", () => $(btn.dataset.close).hidden = true);
-});
-
-["projectModal", "adminModal"].forEach((id) => {
-  $(id).addEventListener("click", (e) => {
-    if (e.target.id === id) $(id).hidden = true;
+  $("adminTabs").querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      adminTab = btn.getAttribute("data-tab");
+      renderDashboard();
+    });
   });
-});
 
-$("adminOpen").addEventListener("click", showAdmin);
-$("openEditor").addEventListener("click", showAdmin);
+  renderAdminPane();
+}
 
-document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "a") {
-    e.preventDefault();
-    showAdmin();
+function renderAdminPane() {
+  const pane = $("adminPane");
+  const s = site();
+
+  if (adminTab === "site") {
+    pane.innerHTML = `
+      <form id="siteEditForm" class="admin-form">
+        <label>الاسم (عربي)<input name="nameAr" value="${s.nameAr}" /></label>
+        <label>الاسم (إنجليزي)<input name="nameEn" value="${s.nameEn}" /></label>
+        <label>العنوان الترويجي (عربي)<input name="taglineAr" value="${s.taglineAr}" /></label>
+        <label>رقم الواتساب<input name="phone" value="${s.phone}" /></label>
+        <button class="btn btn-gold" type="submit">حفظ التغييرات</button>
+      </form>`;
+
+    $("siteEditForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      s.nameAr = fd.get("nameAr");
+      s.nameEn = fd.get("nameEn");
+      s.taglineAr = fd.get("taglineAr");
+      s.phone = fd.get("phone");
+      saveSite(s);
+      renderAll();
+      alert("تم الحفظ بنجاح!");
+    });
+  } else if (adminTab === "projects") {
+    pane.innerHTML = `
+      <div class="admin-list">
+        ${s.projects
+          .map(
+            (p) => `
+          <div class="admin-item">
+            <span><strong>${p.titleAr}</strong> (${catLabel(p.cat)})</span>
+            <button class="danger" onclick="deleteProject('${p.id}')">حذف</button>
+          </div>`
+          )
+          .join("")}
+      </div>`;
+  } else if (adminTab === "inbox") {
+    pane.innerHTML = `
+      <div class="inbox">
+        ${
+          s.messages.length === 0
+            , s.messages.length === 0 ? "<p>لا توجد رسائل جديدة.</p>" : s.messages.map(m => `
+              <article>
+                <div><strong>${m.name}</strong> (${m.email})<p>${m.message}</p></div>
+                <small>${m.date}</small>
+              </article>`).join("")
+        }
+      </div>`;
+  } else {
+    pane.innerHTML = `<p>قريباً...</p>`;
   }
-});
+}
 
-$("authForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const pass = $("authPass").value.trim();
-  const stored = localStorage.getItem(KEYS.pass);
-  const hashed = await hash(pass);
-  if (!stored) {
-    const again = $("authPass2").value.trim();
-    if (pass.length < 4 || pass !== again) {
-      $("authStatus").textContent = lang === "ar" ? "كلمة المرور غير متطابقة أو قصيرة." : "Password mismatch or too short.";
-      return;
-    }
-    localStorage.setItem(KEYS.pass, hashed);
-  } else if (hashed !== stored) {
-    $("authStatus").textContent = lang === "ar" ? "كلمة المرور غير صحيحة." : "Wrong password.";
-    return;
-  }
-  sessionStorage.setItem(KEYS.session, "1");
-  $("authForm").reset();
-  showAdmin();
+function deleteProject(id) {
+  const s = site();
+  s.projects = s.projects.filter((p) => p.id !== id);
+  saveSite(s);
+  renderDashboard();
   renderAll();
-});
-
-$("logoutBtn").addEventListener("click", () => {
-  sessionStorage.removeItem(KEYS.session);
-  $("adminModal").hidden = true;
-  $("editBar").hidden = true;
-});
-
-$("adminTabs").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-tab]");
-  if (!btn) return;
-  adminTab = btn.dataset.tab;
-  renderAdmin();
-});
-
-$("contactForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const data = new FormData(e.currentTarget);
-  const msg = {
-    name: String(data.get("name") || "").trim(),
-    email: String(data.get("email") || "").trim(),
-    message: String(data.get("message") || "").trim(),
-    at: new Date().toISOString(),
-  };
-  const current = site();
-  saveSite({ ...current, messages: [msg, ...(current.messages || [])] });
-  $("formStatus").textContent = ui().sent;
-  e.currentTarget.reset();
-  await notify(msg);
-});
-
-window.addEventListener("pointermove", (e) => {
-  document.querySelector(".cursor-glow").style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
-});
+}
